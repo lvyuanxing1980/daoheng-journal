@@ -9,6 +9,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
+  const [debugInfo, setDebugInfo] = useState('')
   const router = useRouter()
   const supabase = createClient()
 
@@ -16,6 +17,12 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setError('')
+    setDebugInfo('')
+
+    // 调试信息
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '未设置'
+    const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '未设置'
+    setDebugInfo(`URL: ${url}, Key前缀: ${key.slice(0, 20)}...`)
 
     const { error } = await supabase.auth.signInWithOtp({
       email,
@@ -67,6 +74,12 @@ export default function LoginPage() {
                 {error && (
                   <p className="text-red-500 text-sm bg-red-50 rounded-lg px-3 py-2">
                     {error}
+                  </p>
+                )}
+
+                {debugInfo && (
+                  <p className="text-gray-400 text-xs bg-gray-50 rounded-lg px-3 py-2 font-mono">
+                    调试: {debugInfo}
                   </p>
                 )}
 
