@@ -1,17 +1,48 @@
 'use client'
 
-import { useState } from 'react'
-import { createClient } from '@/lib/supabase-client'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { createSupabaseClient } from '@/lib/supabase-client'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
   const [debugInfo, setDebugInfo] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
+  const searchParams = useSearchParams()
+  const supabase = createSupabaseClient()
+
+  // 检查是否已登录
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        router.push('/journal')
+      }
+    })
+
+    // 监听认证状态变化（PKCE callback 会触发）
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === 'SIGNED_IN' && session) {
+          router.push('/journal')
+        }
+      }
+    )
+
+    return () => subscription.unsubscribe()
+  }, [])
+
+  // 检查 URL 中的错误
+  useEffect(() => {
+    const urlError = searchParams.get('error')
+    if (urlError) {
+      setError(urlError)
+    }
+  }, [searchParams])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -19,24 +50,52 @@ export default function LoginPage() {
     setError('')
     setDebugInfo('')
 
-    // 调试信息
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL || '未设置'
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '未设置'
-    setDebugInfo(`URL: ${url}, Key前缀: ${key.slice(0, 20)}...`)
+    setDebugInfo(`URL: ${url}`)
 
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+
+      if (error) {
+        setError(error.message)
+      } else {
+        setSent(true)
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '未知错误')
+    }
 
     setLoading(false)
-    if (error) {
-      setError(error.message)
-    } else {
-      setSent(true)
+  }
+
+  async function handlePasswordLogin(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    setDebugInfo('')
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
+
+      if (error) {
+        setError(error.message)
+      } else {
+        router.push('/journal')
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : '未知错误')
     }
+
+    setLoading(false)
   }
 
   return (
@@ -56,6 +115,8 @@ export default function LoginPage() {
           {!sent ? (
             <>
               <h2 className="text-xl font-semibold text-gray-700 mb-6">登录 / 注册</h2>
+
+              {/* OTP 登录 */}
               <form onSubmit={handleLogin} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-600 mb-1">
@@ -78,8 +139,8 @@ export default function LoginPage() {
                 )}
 
                 {debugInfo && (
-                  <p className="text-gray-400 text-xs bg-gray-50 rounded-lg px-3 py-2 font-mono">
-                    调试: {debugInfo}
+                  <p className="text-gray-400 text-xs bg-gray-50 rounded-lg px-3 py-2 font-mono break-all">
+                    {debugInfo}
                   </p>
                 )}
 
@@ -91,6 +152,41 @@ export default function LoginPage() {
                   {loading ? '发送中…' : '发送登录链接'}
                 </button>
               </form>
+
+              {/* 密码登录切换 */}
+              <div className="mt-4 text-center">
+                <button
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="text-sm text-violet-500 hover:text-violet-700 underline"
+                >
+                  {showPassword ? '收起密码登录' : '使用密码登录'}
+                </button>
+              </div>
+
+              {showPassword && (
+                <form onSubmit={handlePasswordLogin} className="mt-4 space-y-4 pt-4 border-t border-gray-100">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">
+                      密码
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      placeholder="输入密码"
+                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 text-gray-800 transition"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full py-3 px-4 bg-gray-800 text-white rounded-xl font-medium shadow-md hover:bg-gray-900 disabled:opacity-50 transition-all"
+                  >
+                    {loading ? '登录中…' : '密码登录'}
+                  </button>
+                </form>
+              )}
 
               <p className="mt-6 text-xs text-gray-400 text-center leading-relaxed">
                 输入邮箱后，我们会发送一封免密登录邮件。

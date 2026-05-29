@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
-import { createClient } from '@supabase/supabase-js'
+import { createSupabaseAdmin } from '@/lib/supabase-server'
 import { format } from 'date-fns'
 
 // Vercel Cron 每天 UTC 13:00（北京时间 21:00）触发
@@ -18,10 +18,7 @@ export async function GET(request: Request) {
   const today = format(new Date(), 'yyyy-MM-dd')
 
   // 使用 Service Role Key 查询数据库（Supabase Admin）
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+  const supabase = createSupabaseAdmin()
 
   // 查今天是否已有记录
   const { data: existingEntry } = await supabase

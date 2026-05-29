@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase-client'
+import { createSupabaseClient } from '@/lib/supabase-client'
 import { useRouter } from 'next/navigation'
 import { type JournalEntry } from '@/lib/constants'
 import { format, parseISO } from 'date-fns'
@@ -12,7 +12,7 @@ type GroupedEntries = Record<string, JournalEntry[]>
 
 export default function ArchivePage() {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = createSupabaseClient()
   const [entries, setEntries] = useState<JournalEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({ total: 0, streak: 0 })

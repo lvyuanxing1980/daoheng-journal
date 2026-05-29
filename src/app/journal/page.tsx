@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { createClient } from '@/lib/supabase-client'
+import { createSupabaseClient } from '@/lib/supabase-client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { QUESTIONS, type JournalEntry } from '@/lib/constants'
 import { format } from 'date-fns'
@@ -11,7 +11,7 @@ import Link from 'next/link'
 export default function JournalPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const supabase = createClient()
+  const supabase = createSupabaseClient()
 
   const dateParam = searchParams.get('date')
   const today = format(new Date(), 'yyyy-MM-dd')
